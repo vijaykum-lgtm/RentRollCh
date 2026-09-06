@@ -62,15 +62,16 @@ link to their earlier reports.
 - A bot check runs invisibly. A tenant should never see a puzzle.
 
 > Note: "A former tenant's link stops working when the tenancy ends" (this
-> screen's own States table) is exactly what Open contradiction #7 in
-> `spec/index.md` was about, now resolved — the token rotates whenever
-> the unit's current tenant changes. See `cross-cutting.md` §
-> Permission boundary tests for the full decision record.
+> screen's own States table) refers specifically to the tenant's personal
+> `tenant_token` — this route also accepts a unit's durable `door_token`
+> (e.g. scanned from the physical door sticker), which keeps working
+> across tenant turnover. See `spec/decisions.md` D1 and Open
+> contradiction #7 in `spec/index.md` for the full decision record.
 
-> OPEN: the Scope Document's illustrative wireframe (Diagram 4, Wireframe
-> C) shows "Urgent" as the highlighted/selected urgency option, while
-> `T01-SEG-URGENCY` above (from the UIUX Specification) states urgency
-> "Defaults to Normal." This may be the wireframe simply showing a filled
-> example rather than depicting the default state, but the two documents
-> literally disagree on which value is shown selected. See Open
-> contradiction #6 in `spec/index.md`.
+> RESOLVED: the Scope Document's illustrative wireframe (Diagram 4,
+> Wireframe C) shows "Urgent" as the highlighted/selected urgency
+> option, while `T01-SEG-URGENCY` above (from the UIUX Specification)
+> states urgency "Defaults to Normal." **Decision:** default to Normal,
+> per this screen's own spec text — the wireframe is an illustrative
+> filled-in example, not a statement of default state. See
+> `spec/decisions.md` and Open contradiction #6 in `spec/index.md`.

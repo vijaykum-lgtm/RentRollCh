@@ -16,7 +16,7 @@ Header with unit identity and status · four tabs: Overview · Rent history
 
 | ID | Type | Content and behaviour |
 |---|---|---|
-| `L09-TAB-OVERVIEW` | Tab | Rent, deposit, current tenant card, the unit's reporting link with copy and share buttons, lifetime figures: total rent collected, total maintenance spend, net |
+| `L09-TAB-OVERVIEW` | Tab | Rent, deposit, current tenant card, the unit's **door token** link (durable, unit-level — see `spec/decisions.md` D1) with copy and share buttons, lifetime figures: total rent collected, total maintenance spend, net |
 | `L09-TAB-RENT` | Tab | Every month, every tenant, ever. Paid or not, and how much. |
 | `L09-TAB-MAINT` | Tab | Every request against this unit, with cost. A repeated category shows a quiet note: "Plumbing reported 4 times in 12 months." |
 | `L09-TAB-PHOTOS` | Tab | Move-in condition photos grouped by tenancy, plus repair photos and documents |
@@ -31,10 +31,11 @@ Header with unit identity and status · four tabs: Overview · Rent history
 > fact most landlords have never seen for a single flat. Give it space.
 
 > RESOLVED: "the unit's reporting link" here and in `product.md` § Data
-> model is a single, active-at-a-time link belonging to the unit that
-> **rotates** whenever the unit's current tenant changes (move-in or
-> move-out) — which is what makes a former tenant's copy of the link
-> invalid, satisfying the permission boundary tests in
-> `cross-cutting.md` § E4. `L09-BTN-COPYLINK` and `L09-BTN-SHARELINK`
-> always act on whichever token is currently active. See Open
-> contradiction #7 in `spec/index.md` for the full decision record.
+> model is actually two separate tokens — a durable, unit-level
+> `door_token` (what `L09-BTN-COPYLINK` and `L09-BTN-SHARELINK` act on,
+> on this screen) and a per-tenancy `tenant_token` given to the tenant
+> directly at move-in, which is what goes invalid when their tenancy
+> ends — satisfying the permission boundary tests in `cross-cutting.md`
+> § E4 without the door token ever changing. See `spec/decisions.md`
+> D1 and Open contradiction #7 in `spec/index.md` for the full decision
+> record.

@@ -332,21 +332,29 @@ and a record of tenants before. Rent entries, requests and documents attach
 to the **unit**, not the tenant — this is what makes years of history
 possible even as tenants change. Reminders attach to the tenant.
 
-The Unit's reporting link is a single, unit-level field, but the token
-it holds **rotates** every time the unit's current-tenant relationship
-changes (a new tenant moving in, or the current tenant moving out to
-vacancy) — see `spec/index.md` open contradiction #7 for why this
-decision reconciles the field's unit-level ownership with the
-requirement that a former tenant's link stop working.
+The Unit's reporting link is actually two separate tokens: a durable,
+unit-level `door_token` (the physical door-sticker QR) and a
+per-tenancy `tenant_token` (the tenant's own saved personal link, valid
+only while that tenancy is current). See `spec/decisions.md` D1 for the
+full rationale.
 
-> OPEN: `L-07`'s vendor field ("remembers previously used vendors as
-> suggestions," UIUX Part B) implies some persisted, recallable list of
-> vendors, but there is no Vendor entity in this diagram — vendor name and
-> phone appear to live only as free text on each Request record. It is not
-> specified whether a distinct Vendor entity is intended (so vendors can be
-> reused, edited, or reported on across units) or whether "remembers" means
-> nothing more than autocomplete over the landlord's own past Request
-> entries. See Open contradiction #4 in `spec/index.md`.
+This table is a starting sketch, not a final schema. Several fields
+and entities named or implied elsewhere in this spec — a payment
+distinct from a rent entry, an agreement distinct from a tenant, a
+deposit deduction, a generic audit/history event, a document's optional
+link to a specific request — have no home in the diagram above.
+`spec/decisions.md` records the resolution for each of these before any
+schema is written; see its § Resulting entities for a consolidated,
+still-informal picture.
+
+> RESOLVED: `L-07`'s vendor field ("remembers previously used vendors
+> as suggestions," UIUX Part B) implies some persisted, recallable
+> list of vendors, but there is no Vendor entity in this diagram —
+> vendor name and phone appear to live only as free text on each
+> Request record. **Decision:** no distinct Vendor entity; "remembers"
+> is a read-time autocomplete over the landlord's own past Request
+> entries. See `spec/decisions.md` D8 and Open contradiction #4 in
+> `spec/index.md`.
 
 ## Scope
 

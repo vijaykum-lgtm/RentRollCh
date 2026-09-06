@@ -120,10 +120,12 @@ These are preserved exactly as found — not resolved — because resolving
 them would mean guessing at product intent. Each is also marked with
 `> OPEN:` at its most specific location.
 
-Contradiction #7 has since been resolved by explicit product decision
-(below); its `> OPEN:` markers have been replaced in place with that
-decision, in `cross-cutting.md`, `product.md`, and
-`screens/landlord/L-09-unit-detail.md`.
+Contradictions #4, #6, and #7 have since been resolved by explicit
+product decision — see `spec/decisions.md` for the full record (D1, D8,
+and the urgency-default decision respectively). Their `> OPEN:` markers
+have been replaced in place with short pointers, in `cross-cutting.md`,
+`product.md`, `screens/landlord/L-09-unit-detail.md`, and
+`screens/tenant/T-01-report-a-problem.md`.
 
 1. **Landlord screen count.** UIUX cover page states "14 landlord screens."
    The Screen map and Part B document 15 (`L-01` through `L-15`). See
@@ -140,14 +142,15 @@ decision, in `cross-cutting.md`, `product.md`, and
    (urgent maintenance first, then overdue 10+ days, then agreements ≤30
    days, then overdue 1–9 days) to the same four items yields a different
    order: `1B`, `4C`, `3B`, `2A`. See `screens/landlord/L-03-portfolio-dashboard.md`.
-4. **Vendor as a persisted entity.** `L-07`'s vendor field "remembers
-   previously used vendors as suggestions," implying some stored list of
-   vendors. The Scope Document's entity relationship diagram (§15) has no
-   Vendor entity — vendor name and phone appear to live only as free text on
-   each Request record. Unclear whether a distinct Vendor entity is
-   intended, or whether "remembers" means autocomplete over past Request
-   values only. See `product.md` § Data model and
-   `screens/landlord/L-07-request-detail-panel.md`.
+4. **RESOLVED — Vendor as a persisted entity.** `L-07`'s vendor field
+   "remembers previously used vendors as suggestions," implying some
+   stored list of vendors. The Scope Document's entity relationship
+   diagram (§15) has no Vendor entity — vendor name and phone appear to
+   live only as free text on each Request record. **Decision:** no
+   distinct Vendor entity — the field stays free text on Request, and
+   "remembers... as suggestions" is a read-time autocomplete over past
+   values, which fully satisfies the described behaviour without a new
+   table. See `spec/decisions.md` D8 for the full rationale.
 5. **What counts as one of "the eight modules."** Scope §6 lists eight
    modules and includes the tenant-facing "Tenant request portal" among
    them. The UIUX landlord sidebar (§A3) also has eight items, but
@@ -155,11 +158,14 @@ decision, in `cross-cutting.md`, `product.md`, and
    correctly sits on the tenant side per the Information Architecture
    diagram (Scope §8). The two "eights" are different sets. See
    `product.md` § The eight modules.
-6. **Default urgency vs. illustrative wireframe.** Scope Diagram 4
-   (Wireframe C) shows "Urgent" as the highlighted urgency option. UIUX
-   `T01-SEG-URGENCY` states urgency "Defaults to Normal." This may simply be
-   the wireframe showing a filled-in example rather than the default state,
-   but the two documents literally show different selected values. See
+6. **RESOLVED — Default urgency vs. illustrative wireframe.** Scope
+   Diagram 4 (Wireframe C) shows "Urgent" as the highlighted urgency
+   option. UIUX `T01-SEG-URGENCY` states urgency "Defaults to Normal."
+   **Decision:** default to Normal, per `T01-SEG-URGENCY`'s explicit
+   spec text; the wireframe is an illustrative filled-in example, not a
+   statement of default state (consistent with how contradiction #3
+   above treats the same source document's wireframes). See
+   `spec/decisions.md` for the full rationale. See
    `screens/tenant/T-01-report-a-problem.md`.
 
 7. **RESOLVED — Unit-scoped link vs. tenancy-scoped expiry.** The Scope
@@ -172,22 +178,21 @@ decision, in `cross-cutting.md`, `product.md`, and
    lifetime. The two framings were not reconciled in either source
    document.
 
-   **Decision:** a unit has exactly one *active* reporting link at a
-   time. It is created when the unit itself is added — Scope §5 stage 1
-   ("Setting up") has the app "creates a link and a printable QR for
-   every unit" before any tenant exists, so the link cannot be tenant-
-   owned from the start — and it is **rotated** every time the unit's
-   current-tenant relationship changes: a new tenant moving in, or the
-   current tenant moving out to vacancy. Rotation immediately
-   invalidates whichever token was active a moment before.
-   This satisfies both source documents at once: the unit always "has
-   its own reporting link" (`product.md` § Data model keeps a single
-   `Unit.reportingLinkToken`-shaped field, not a per-tenant one), and a
-   former tenant's link stops working exactly when their tenancy ends
-   (`cross-cutting.md` § E4), because ending a tenancy is the event that
-   triggers rotation. See `cross-cutting.md` § Permission boundary tests
-   and `screens/landlord/L-09-unit-detail.md` for where this decision is
-   now recorded.
+   **Decision (superseding an earlier "single rotating token" pass at
+   this contradiction):** two separate tokens. `unit.door_token` is
+   created once, when the unit is added, and never changes — this is
+   the physical door-sticker/QR token (Scope §5 stage 1 mints it before
+   any tenant exists; Scope §12 connection 11 describes it as a
+   sticker on the door). `tenancy.tenant_token` is created per tenancy
+   (one per stay) and is the tenant's own saved personal link; it stops
+   resolving once that tenancy is no longer current. Both satisfy their
+   respective source statements at once: the unit still "has its own
+   reporting link" (the durable door token), and a former tenant's
+   personal link stops working exactly when their tenancy ends,
+   without ever touching — or requiring the reprinting of — the
+   physical door sticker. See `spec/decisions.md` D1 for the full
+   rationale, `cross-cutting.md` § Permission boundary tests, and
+   `screens/landlord/L-09-unit-detail.md`.
 
 No other numeric, behavioural, or structural conflicts were found between
 the two source documents during this conversion.
