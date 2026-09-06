@@ -100,8 +100,38 @@ export async function requestPasswordReset(
     // spec/screens/landlord/L-01-sign-in.md § Interactions — the same
     // confirmation is shown whether or not the email exists, so any
     // error here is deliberately swallowed rather than surfaced.
-    await supabase.auth.resetPasswordForEmail(email).catch(() => {});
+    await supabase.auth
+      .resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/reset/confirm`,
+      })
+      .catch(() => {});
   }
 
   return { submitted: true };
+}
+
+export interface ConfirmResetResult {
+  error?: string;
+}
+
+export async function confirmPasswordReset(
+  _prevState: ConfirmResetResult,
+  formData: FormData,
+): Promise<ConfirmResetResult> {
+  const password = String(formData.get("password") ?? "");
+
+  // spec/screens/landlord/L-01-sign-in.md § Rules — 8 char minimum.
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return {
+      error: "This reset link has expired. Request a new one.",
+    };
+  }
+
+  redirect("/signin");
 }
