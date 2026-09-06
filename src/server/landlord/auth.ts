@@ -118,7 +118,15 @@ export async function confirmPasswordReset(
   _prevState: ConfirmResetResult,
   formData: FormData,
 ): Promise<ConfirmResetResult> {
+  const code = String(formData.get("code") ?? "");
   const password = String(formData.get("password") ?? "");
+  const expiredError = {
+    error: "This reset link has expired. Request a new one.",
+  };
+
+  if (!code) {
+    return expiredError;
+  }
 
   // spec/screens/landlord/L-01-sign-in.md § Rules — 8 char minimum.
   if (password.length < 8) {
@@ -126,11 +134,21 @@ export async function confirmPasswordReset(
   }
 
   const supabase = await createClient();
+
+  // @supabase/ssr defaults to the PKCE flow: the emailed link carries a
+  // one-time `code`, not a session, so it has to be exchanged for one
+  // here before updateUser() has anything to act on. Server Actions (like
+  // Server Components can't) are allowed to write the resulting session
+  // cookie.
+  const { error: exchangeError } =
+    await supabase.auth.exchangeCodeForSession(code);
+  if (exchangeError) {
+    return expiredError;
+  }
+
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    return {
-      error: "This reset link has expired. Request a new one.",
-    };
+    return expiredError;
   }
 
   redirect("/signin");
