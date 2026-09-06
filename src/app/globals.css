@@ -1,1 +1,72 @@
 @import "tailwindcss";
+
+@theme {
+  /* Colour — spec/foundations.md § A1. Status colour is never the only
+     signal — every status chip still needs a text label alongside these. */
+  --color-ink: #14202b;
+  --color-body: #3c4a57;
+  --color-muted: #7c8b99;
+  --color-line: #e2e8ed;
+  --color-canvas: #f6f8fa;
+  --color-surface: #ffffff;
+  --color-primary: #1b3a5c;
+  --color-primary-soft: #dce7f0;
+  --color-success: #1e7a4d;
+  --color-warning: #b4761a;
+  --color-danger: #b3352c;
+  --color-neutral: #8a9ba5;
+
+  /* Radius — spec/foundations.md § A1 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  /* Elevation — spec/foundations.md § A1 */
+  --shadow-card: 0 1px 2px rgba(20, 32, 43, 0.06);
+  --shadow-modal: 0 8px 24px rgba(20, 32, 43, 0.12);
+}
+
+/*
+ * Type scale — spec/foundations.md § A1, one utility per token (size,
+ * line-height and weight are one indivisible token there, so they're
+ * baked in together here). Named `type-*` rather than `text-*` because
+ * the colour scale above already claims the `text-body` utility for the
+ * body-copy colour — `text-*` is Tailwind's namespace for both font size
+ * and text colour, and "body" is a name both tables happen to use.
+ */
+@utility type-display {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+@utility type-h1 {
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+@utility type-h2 {
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+@utility type-body {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+@utility type-small {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+@utility type-label {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-body);
+}
