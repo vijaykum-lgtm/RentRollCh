@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check:boundaries": "tsx scripts/check-boundaries.ts",
+    "seed:demo": "tsx scripts/seed/index.ts",
     "verify": "npm run typecheck && npm run lint && npm run check:boundaries && npm run test && npm run build"
   },
   "dependencies": {
