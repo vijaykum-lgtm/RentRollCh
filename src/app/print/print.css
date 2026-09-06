@@ -1,0 +1,15 @@
+/*
+ * Print-only sizing for P-01–P-03 — scoped to this route via layout.tsx
+ * import, not added to the shared src/app/globals.css.
+ */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: var(--color-surface);
+  }
+}
