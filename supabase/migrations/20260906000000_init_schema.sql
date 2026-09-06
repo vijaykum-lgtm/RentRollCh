@@ -326,17 +326,50 @@ create policy property_owner on public.property
   using (landlord_id = auth.uid())
   with check (landlord_id = auth.uid());
 
+-- Deliberately not app.unit_landlord(id): that helper looks the unit up
+-- by id in this same table, which doesn't work for INSERT -- the row
+-- being checked doesn't exist in public.unit yet when WITH CHECK runs,
+-- so the lookup always returns zero rows and every authenticated INSERT
+-- would be rejected. property_id is a column of the row itself (already
+-- known, whether the row is new or existing), so it needs no self-lookup.
 create policy unit_owner on public.unit
   for all
   to authenticated
-  using (app.unit_landlord(id) = auth.uid())
-  with check (app.unit_landlord(id) = auth.uid());
+  using (
+    exists (select 1 from public.property p where p.id = unit.property_id and p.landlord_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.property p where p.id = unit.property_id and p.landlord_id = auth.uid())
+  );
 
-create policy tenant_owner on public.tenant
-  for all
+-- Split by action rather than one `for all` policy: app.tenant_landlord()
+-- resolves ownership through an existing tenancy row, but a brand-new
+-- tenant has no tenancy pointing at it yet (tenancy.tenant_id is what
+-- would reference it, and that row doesn't exist until after this one
+-- does) -- a `with check` there would reject every INSERT. A bare tenant
+-- row carries only a name and phone number and is invisible to every
+-- other landlord regardless (nothing joins to it yet), so insert is left
+-- open; read/update/delete stay ownership-scoped once a tenancy exists.
+create policy tenant_select on public.tenant
+  for select
+  to authenticated
+  using (app.tenant_landlord(id) = auth.uid());
+
+create policy tenant_insert on public.tenant
+  for insert
+  to authenticated
+  with check (true);
+
+create policy tenant_update on public.tenant
+  for update
   to authenticated
   using (app.tenant_landlord(id) = auth.uid())
   with check (app.tenant_landlord(id) = auth.uid());
+
+create policy tenant_delete on public.tenant
+  for delete
+  to authenticated
+  using (app.tenant_landlord(id) = auth.uid());
 
 create policy tenancy_owner on public.tenancy
   for all

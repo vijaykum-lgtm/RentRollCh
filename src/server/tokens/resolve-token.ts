@@ -46,21 +46,23 @@ export async function resolveToken(
 ): Promise<TokenResolution> {
   const activeClient = client ?? (createServiceClient() as unknown as TokenQueryClient);
 
-  const { data: unit } = await activeClient
-    .from("unit")
-    .select("id")
-    .eq("door_token", token)
-    .maybeSingle();
+  // Run both lookups concurrently rather than door-then-tenancy in
+  // sequence: a door token wastes one query this way, but a tenant token
+  // or an invalid one (arguably the more common case day to day, since a
+  // saved personal link is what a tenant actually uses) no longer pays
+  // for two round trips back to back.
+  const [{ data: unit }, { data: tenancy }] = await Promise.all([
+    activeClient.from("unit").select("id").eq("door_token", token).maybeSingle(),
+    activeClient
+      .from("tenancy")
+      .select("id, unit_id, status")
+      .eq("tenant_token", token)
+      .maybeSingle(),
+  ]);
 
   if (unit) {
     return { kind: "door", unitId: unit.id as string };
   }
-
-  const { data: tenancy } = await activeClient
-    .from("tenancy")
-    .select("id, unit_id, status")
-    .eq("tenant_token", token)
-    .maybeSingle();
 
   if (tenancy && tenancy.status !== "past") {
     return {
