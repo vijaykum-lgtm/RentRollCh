@@ -62,10 +62,10 @@ link to their earlier reports.
 - A bot check runs invisibly. A tenant should never see a puzzle.
 
 > Note: "A former tenant's link stops working when the tenancy ends" (this
-> screen's own States table) is the specific statement that drives Open
-> contradiction #7 in `spec/index.md` — see `cross-cutting.md` § Permission
-> boundary tests for the full discussion of the unit-link vs.
-> tenancy-link tension.
+> screen's own States table) is exactly what Open contradiction #7 in
+> `spec/index.md` was about, now resolved — the token rotates whenever
+> the unit's current tenant changes. See `cross-cutting.md` §
+> Permission boundary tests for the full decision record.
 
 > OPEN: the Scope Document's illustrative wireframe (Diagram 4, Wireframe
 > C) shows "Urgent" as the highlighted/selected urgency option, while

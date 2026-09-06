@@ -332,6 +332,13 @@ and a record of tenants before. Rent entries, requests and documents attach
 to the **unit**, not the tenant — this is what makes years of history
 possible even as tenants change. Reminders attach to the tenant.
 
+The Unit's reporting link is a single, unit-level field, but the token
+it holds **rotates** every time the unit's current-tenant relationship
+changes (a new tenant moving in, or the current tenant moving out to
+vacancy) — see `spec/index.md` open contradiction #7 for why this
+decision reconciles the field's unit-level ownership with the
+requirement that a former tenant's link stop working.
+
 > OPEN: `L-07`'s vendor field ("remembers previously used vendors as
 > suggestions," UIUX Part B) implies some persisted, recallable list of
 > vendors, but there is no Vendor entity in this diagram — vendor name and

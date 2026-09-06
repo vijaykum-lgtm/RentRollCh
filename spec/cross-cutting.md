@@ -113,28 +113,17 @@ because they are the direct enforcement of universal rule #2 above.
 | Reach any landlord route while signed out | Redirect to L-01, then return to the intended screen after signing in |
 | Open a document belonging to another landlord | Not found |
 
-Implementation note: a former tenant's link failing (row 2) means link
-validity must be scoped to the *current* tenancy on a unit, not merely to
-the unit — a unit's reporting link outlives any one tenant (`Unit.its own
-reporting link` in `product.md` § Data model), but access via that link
-must be re-checked against who is the *current* tenant, if link validity is
-tenancy-scoped rather than unit-scoped.
-
-> OPEN: the Scope Document's entity model shows the unit itself owning "its
-> own reporting link" (§15, Unit entity), which reads as one durable link
-> per unit for its lifetime. UIUX's `T-01` route is described as
-> `/u/:unitToken` — "one unguessable token per unit, not the unit number" —
-> also unit-scoped. But E4's test "open a former tenant's link after the
-> tenancy ended" expects that link to go invalid. Neither document
-> reconciles a unit-scoped, unchanging token with a link that must expire
-> when a tenancy ends; a straightforward reading requires the token (or its
-> validity check) to actually be tenancy-scoped, contradicting "one link
-> per unit" and "its own reporting link" being a unit-level, not
-> tenancy-level, property. Implementers should treat tenancy-scoping as the
-> binding requirement (it is the more specific, more recently stated rule)
-> but the data-model documents should be reconciled with product ownership
-> before building `L-08`/`L-09`'s "share the unit link" and "welcome
-> message" features on top of it.
+Implementation note: a former tenant's link failing (row 2) means the
+token is **rotated** whenever a unit's current-tenant relationship
+changes — a new tenant moving in, or the current tenant moving out to
+vacancy. The unit still has exactly one *active* reporting link at any
+given time (`Unit.reportingLinkToken` in `product.md` § Data model
+remains a single, unit-level field), but rotation on every tenancy
+change is what makes a departed tenant's copy of the link stop
+resolving. See spec/index.md open contradiction #7 for the full
+decision record; this replaces what was previously an open
+contradiction between "one durable link per unit" and "a former
+tenant's link must expire."
 
 ## A5 · Accessibility floor
 
