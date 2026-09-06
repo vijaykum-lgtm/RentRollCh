@@ -1,0 +1,31 @@
+# Local Supabase CLI config. Not exercised by this sandbox (no Docker/CLI
+# available here) -- added so `supabase start`/`supabase db reset` work
+# once you have the CLI installed locally. Regenerate with `supabase init`
+# if this drifts from a newer CLI's expected shape.
+project_id = "rentroll"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/reset/confirm"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
