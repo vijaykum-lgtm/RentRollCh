@@ -120,6 +120,11 @@ These are preserved exactly as found — not resolved — because resolving
 them would mean guessing at product intent. Each is also marked with
 `> OPEN:` at its most specific location.
 
+Contradiction #7 has since been resolved by explicit product decision
+(below); its `> OPEN:` markers have been replaced in place with that
+decision, in `cross-cutting.md`, `product.md`, and
+`screens/landlord/L-09-unit-detail.md`.
+
 1. **Landlord screen count.** UIUX cover page states "14 landlord screens."
    The Screen map and Part B document 15 (`L-01` through `L-15`). See
    `spec/index.md` screen index above and `foundations.md`.
@@ -157,15 +162,32 @@ them would mean guessing at product intent. Each is also marked with
    but the two documents literally show different selected values. See
    `screens/tenant/T-01-report-a-problem.md`.
 
-7. **Unit-scoped link vs. tenancy-scoped expiry.** The Scope Document's
-   data model gives each **unit** "its own reporting link" (§15) and UIUX's
-   `T-01` route (`/u/:unitToken`) is likewise described as one token per
-   unit. But `cross-cutting.md`'s permission boundary tests (UIUX §E4)
-   require a former tenant's link to stop working once their tenancy ends
-   — which only makes sense if the link (or its validity) is actually
-   scoped to the *tenancy*, not the unit for its lifetime. The two framings
-   are not reconciled in either source document. See `cross-cutting.md` §
-   Permission boundary tests.
+7. **RESOLVED — Unit-scoped link vs. tenancy-scoped expiry.** The Scope
+   Document's data model gives each **unit** "its own reporting link"
+   (§15) and UIUX's `T-01` route (`/u/:unitToken`) is likewise described
+   as one token per unit. But `cross-cutting.md`'s permission boundary
+   tests (UIUX §E4) require a former tenant's link to stop working once
+   their tenancy ends — which only makes sense if the link (or its
+   validity) is actually scoped to the *tenancy*, not the unit for its
+   lifetime. The two framings were not reconciled in either source
+   document.
+
+   **Decision:** a unit has exactly one *active* reporting link at a
+   time. It is created when the unit itself is added — Scope §5 stage 1
+   ("Setting up") has the app "creates a link and a printable QR for
+   every unit" before any tenant exists, so the link cannot be tenant-
+   owned from the start — and it is **rotated** every time the unit's
+   current-tenant relationship changes: a new tenant moving in, or the
+   current tenant moving out to vacancy. Rotation immediately
+   invalidates whichever token was active a moment before.
+   This satisfies both source documents at once: the unit always "has
+   its own reporting link" (`product.md` § Data model keeps a single
+   `Unit.reportingLinkToken`-shaped field, not a per-tenant one), and a
+   former tenant's link stops working exactly when their tenancy ends
+   (`cross-cutting.md` § E4), because ending a tenancy is the event that
+   triggers rotation. See `cross-cutting.md` § Permission boundary tests
+   and `screens/landlord/L-09-unit-detail.md` for where this decision is
+   now recorded.
 
 No other numeric, behavioural, or structural conflicts were found between
 the two source documents during this conversion.

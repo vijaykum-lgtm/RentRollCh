@@ -30,8 +30,11 @@ Header with unit identity and status · four tabs: Overview · Rent history
 > product.** "This unit earned ₹2.1 lakh and cost ₹34,000 last year" is a
 > fact most landlords have never seen for a single flat. Give it space.
 
-> OPEN: "the unit's reporting link" here and in `product.md` § Data model
-> is described as a single, durable link belonging to the unit, while the
-> permission boundary tests in `cross-cutting.md` require a former
-> tenant's link to become invalid at end of tenancy. See Open contradiction
-> #7 in `spec/index.md`.
+> RESOLVED: "the unit's reporting link" here and in `product.md` § Data
+> model is a single, active-at-a-time link belonging to the unit that
+> **rotates** whenever the unit's current tenant changes (move-in or
+> move-out) — which is what makes a former tenant's copy of the link
+> invalid, satisfying the permission boundary tests in
+> `cross-cutting.md` § E4. `L09-BTN-COPYLINK` and `L09-BTN-SHARELINK`
+> always act on whichever token is currently active. See Open
+> contradiction #7 in `spec/index.md` for the full decision record.
