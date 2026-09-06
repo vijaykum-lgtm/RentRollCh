@@ -113,17 +113,15 @@ because they are the direct enforcement of universal rule #2 above.
 | Reach any landlord route while signed out | Redirect to L-01, then return to the intended screen after signing in |
 | Open a document belonging to another landlord | Not found |
 
-Implementation note: a former tenant's link failing (row 2) means the
-token is **rotated** whenever a unit's current-tenant relationship
-changes — a new tenant moving in, or the current tenant moving out to
-vacancy. The unit still has exactly one *active* reporting link at any
-given time (`Unit.reportingLinkToken` in `product.md` § Data model
-remains a single, unit-level field), but rotation on every tenancy
-change is what makes a departed tenant's copy of the link stop
-resolving. See spec/index.md open contradiction #7 for the full
-decision record; this replaces what was previously an open
-contradiction between "one durable link per unit" and "a former
-tenant's link must expire."
+Implementation note: a former tenant's link failing (row 2) refers to
+that tenant's **personal** link — `tenancy.tenant_token`, one per stay,
+which stops resolving once the tenancy is no longer current. It does
+not refer to the unit's own door-sticker QR (`unit.door_token`), which
+is durable and unit-level for the unit's lifetime, unaffected by tenant
+turnover. See `spec/decisions.md` D1 for the full decision record
+(two separate tokens, resolving what was previously an open
+contradiction — spec/index.md #7 — between "one durable link per unit"
+and "a former tenant's link must expire").
 
 ## A5 · Accessibility floor
 
