@@ -29,8 +29,10 @@ resolution; the inline notes in `cross-cutting.md`, `product.md`,
 
 ## Status
 
-- **12 decisions resolved** (D1–D12 below), covering all 7 mandatory
-  schema corrections plus 5 additional schema-blocking gaps found while
+- **12 decisions resolved** (D1–D12 below): **D1–D7** are the 7
+  mandatory schema corrections (each capped at 200 words: what the
+  source said, why it cannot be right, what we chose, what it costs);
+  **D8–D12** are 5 additional schema-blocking gaps found while
   reviewing every screen against the data model.
 - **4 items reviewed and left intentionally open** (§ Reviewed, not
   blocking) — real mismatches between the two source documents, but
@@ -44,171 +46,117 @@ resolution; the inline notes in `cross-cutting.md`, `product.md`,
 
 ## D1. Two tokens, not one: `unit.door_token` and `tenancy.tenant_token`
 
-**Conflicting source requirements.** `product.md` § Data model gives the
-**Unit** entity "its own reporting link" — one durable, unit-level
-token, matching Scope §5 stage 1 ("Setting up"): the app "creates a
-link and a printable QR for every unit" *before any tenant exists*.
-`T-01`'s route is likewise `/u/:unitToken`, "one unguessable token per
-unit." But `cross-cutting.md`'s permission boundary tests (§ E4) require
-a *former tenant's* link to stop working once their tenancy ends — a
-requirement that only makes sense if the link is scoped to the
-*tenancy*, not the unit for its lifetime.
+**Conflicting source requirements.** `product.md` gives the **Unit**
+"its own reporting link" — one durable, unit-level token (Scope §5:
+minted before any tenant exists; `T-01` route `/u/:unitToken`). But
+`cross-cutting.md` § E4 requires a *former tenant's* link to stop
+working once their tenancy ends — only sensible if scoped to the
+tenancy, not the unit.
 
-**Why they cannot both be implemented literally, with one token.** A
-single unit-level token that is also expected to expire per-tenancy is
-self-contradictory. Worse, `P-03` (door QR card) and `L08-BTN-PRINTQR`
-describe this token as a **physical, printed artifact** — "a sticker
-inside the flat door" (Scope §12, connection 11). If that same token
-had to expire or rotate every time a tenant moved in or out (an earlier
-pass at this decision proposed exactly that), the landlord would need
-to reprint and re-stick a physical door sticker at every tenancy
-change — a real-world task nothing in this spec describes, and one that
-directly contradicts the door card being a durable fixture.
+**Why they cannot both be implemented literally.** One token can't be
+both a permanent unit constant and expected to expire per-tenancy.
+`P-03`/`L08-BTN-PRINTQR` describe it as a **physical door sticker**;
+rotating it at every tenancy change would mean reprinting and
+re-sticking it each time — an action nothing in this spec describes.
 
-**Decision.** Two separate tokens:
+**Decision.** Two tokens. `unit.door_token` — one per unit, set at
+setup, never rotated; resolves `T-01` anonymously (no prefill). Access
+to the door is the access control. `tenancy.tenant_token` — one per
+stay, valid only while current; resolves `T-01` prefilled and is the
+only route to `T-03`–`T-05`. Both share route shape `/u/:token`,
+resolved server-side by kind.
 
-- **`unit.door_token`** — one per unit, created when the unit is added,
-  never rotated. This is the physical door-sticker/QR token (`P-03`,
-  `L08-BTN-PRINTQR`, `L09-BTN-QR`). It resolves to `T-01`'s report form
-  in a generic, no-tenant-identified mode: blank fields, no
-  pre-filled name/phone, no "My earlier reports" link — appropriate for
-  anyone standing at the door (a new occupant, a guest, a vendor),
-  since physical access to the door is itself the access control.
-- **`tenancy.tenant_token`** — one per tenancy (one per stay, not one
-  per unit-for-life), created at move-in, and valid only while that
-  tenancy is current. This is the personal link every tenant is given
-  and asked to save (Scope §4: "every tenant gets their own unit link";
-  `T02-BTN-SAVE`). It also resolves to `T-01` (pre-filled name/phone,
-  "My earlier reports" visible) and is the only way to reach `T-03`,
-  `T-04`, `T-05`. It stops resolving the moment the tenancy is no
-  longer current — satisfying `cross-cutting.md` § E4 row 2 without
-  touching the door token at all.
-
-Both tokens share the same route shape (`/u/:token`); which kind of
-token a given value is gets resolved server-side, and the resulting
-session context (anonymous-generic vs. a specific tenancy) differs
-accordingly.
-
-**Consequences.** `T-01` needs two rendering modes (anonymous vs.
-tenancy-scoped) instead of one — a real but small addition to what's
-already described. `L09-TAB-OVERVIEW`'s "the unit's reporting link with
-copy and share buttons" now specifically means `door_token`; the
-tenant's personal link is generated and shown at move-in time instead
-(`L-11`/`L-09-BTN-ADDTENANT` flow), not on the unit page. Ending a
-tenancy (`L11-BTN-ENDTENANCY`) invalidates only that tenancy's
-`tenant_token` — the unit's `door_token` and its printed sticker keep
-working, unaffected, for the next occupant.
+**Consequences.** `T-01` needs two rendering modes instead of one.
+`L09-TAB-OVERVIEW`'s link now means `door_token`; the personal link
+shows at move-in instead. Ending a tenancy invalidates only its
+`tenant_token` — the sticker is unaffected.
 
 ---
 
 ## D2. `payment` is a child of `rent_entry`
 
-**Conflicting source requirements.** `product.md`'s **Rent entry**
-entity has single fields for amount paid, paid-on date, and receipt
-number — one payment per row, ever. But `L-04`'s own rules describe
-**part payment**: "If the amount received is less than rent due, the
-row shows 'Part paid — ₹4,000 pending'... **A receipt is issued for
-the amount actually received**" — implying a rent entry can receive
-more than one payment (a partial amount, then a top-up), each of which
-gets its own receipt, date, and reference.
+**Conflicting source requirements.** `product.md`'s **Rent entry** has
+single fields for amount paid, paid-on date, receipt number — one
+payment per row, ever. But `L-04`'s **part payment** rule ("Part paid
+— ₹4,000 pending... a receipt is issued for the amount actually
+received") implies a rent entry can receive more than one payment,
+each with its own receipt, date, and reference.
 
-**Why they cannot both be implemented literally.** A rent entry with
-singular `amount_paid`/`paid_on`/`receipt_number` fields cannot record
-a second payment against the same month without overwriting the first
-one's receipt number and date — silently destroying exactly the kind
-of payment evidence the product exists to preserve (Scope §2's own
-framing: "no receipts were ever issued" is the problem being solved).
-It would also break `T-05` ("My receipts" — one row per receipt),
-which would only ever be able to show the *last* of two partial
-payments for a given month.
+**Why they cannot both be implemented literally.** Singular
+`amount_paid`/`paid_on`/`receipt_number` fields cannot record a second
+payment against the same month without overwriting the first receipt
+— the exact problem the product exists to solve (Scope §2: "no
+receipts were ever issued"). It would also break `T-05`, which could
+only ever show the *last* of two partial payments for a month.
 
 **Decision.** `payment` becomes its own entity, many per `rent_entry`:
-amount, date received, payment reference, receipt number. Each
-mark-paid action (full or partial) creates one `payment` row.
-`rent_entry.amount_paid` is a derived value (sum of its payments'
-amounts), not a field that gets overwritten.
+amount, date received, reference, receipt number. Each mark-paid action
+creates one `payment` row. `rent_entry.amount_paid` is derived (sum of
+its payments), not an overwritten field.
 
 **Consequences.** `T-05` and `P-01` operate on `payment` rows, not
-`rent_entry` rows — which is actually the more natural reading of both
-already ("Month · amount · receipt number... a print button **each**").
-`L04-CHP-STATUS`'s "Part paid" state is `sum(payments) < amount_due`.
-The mark-paid toast's 10-second Undo now reverses (deletes) the
-just-created payment row specifically, rather than reverting a mutated
-field — a cleaner operation than the current wording implies.
+`rent_entry` rows — the more natural reading of both already.
+`L04-CHP-STATUS`'s "Part paid" is `sum(payments) < amount_due`. The
+mark-paid toast's Undo now deletes the just-created payment row
+specifically, rather than reverting a mutated field.
 
 ---
 
 ## D3. `agreement` is its own entity
 
 **Conflicting source requirements.** `product.md`'s **Tenant** entity
-bundles "agreement start/end" directly onto the tenant record. But
-`L12-BTN-RENEW`'s own description says a renewal is a save that updates
-"the agreement dates" — while `L-12`'s **Rules**, one paragraph later,
-require: "**Rent changes take effect from the new start date. Rows
-already generated for earlier months are not altered.**" `L13-SEC-DEPOSIT`
-also cites an "agreement reference" as a distinct, citable thing, and
-`L-09`'s lifetime figures ("This unit earned ₹2.1 lakh...") depend on
-correctly attributing historical rent rows to whatever terms applied
-at the time.
+bundles "agreement start/end" onto the tenant record. But `L-12`
+requires: "Rent changes take effect from the new start date. Rows
+already generated are not altered." `L13-SEC-DEPOSIT` cites an
+"agreement reference" as a distinct thing, and `L-09`'s lifetime
+figures depend on attributing rent rows to the terms in force then.
 
 **Why they cannot both be implemented literally.** If a renewal
-overwrites the single start/end/rent fields on Tenant in place (as the
-literal wording of `L12-BTN-RENEW` describes), the pre-renewal rent
-figure is gone the instant the renewal is saved — even though older
-rent rows, created under the old terms, still need to be correctly
-understood against what was in force when they were created. "Update
-in place" and "preserve every prior term for historical accuracy" are
-mutually exclusive on the same field. This also matters across the
-11-month leave-and-license terms this spec's own examples assume are
-the norm in India — a tenant renewed three times over three years needs
-three distinct historical agreements, not one field overwritten three
-times.
+overwrites the start/end/rent fields in place, the pre-renewal figure
+is gone the instant it's saved — even though older rows still need the
+terms in force when created. "Update in place" and "preserve every
+prior term" are exclusive on one field, across the multi-year renewal
+cycles this spec assumes.
 
-**Decision.** `agreement` becomes its own entity — one row per signed
-or renewed term (start date, end date, rent amount, deposit amount at
-the time) — with a tenancy able to accumulate many agreements over its
-life. `L12-BTN-RENEW` closes out the current agreement and creates a
-new one; it does not mutate the old row.
+**Decision.** `agreement` is its own entity — one row per signed or
+renewed term (start, end, rent, deposit at the time) — a tenancy
+accumulates many over its life. `L12-BTN-RENEW` closes the current
+agreement and creates a new one; it does not mutate the old row.
 
 **Consequences.** `L11-SEC-AGREEMENT` displays the tenancy's *current*
 agreement. `L-12`'s "rows already generated are not altered" is now
-trivially true — old rent rows simply reference (or were generated
-under) the old agreement row, which still exists. `L13-SEC-DEPOSIT`'s
-"agreement reference" can cite a specific agreement row.
+trivially true — old rent rows reference the old agreement row, which
+still exists. `L13-SEC-DEPOSIT`'s "agreement reference" can cite a
+specific agreement row.
 
 ---
 
 ## D4. `agreement` owns `rent_due_day`
 
-**Conflicting source requirements.** The rent lifecycle flowchart
-(`product.md` § Rent lifecycle) says "**1st of the month** — a rent row
-is created per unit," reading as a single, portfolio-wide constant. But
-`L-04`'s **Mid-month move-in** rule ("the first month's row is created
-with the pro-rata amount") and its own per-row **Due date** column
-imply due dates are meaningful at the level of an individual tenancy,
-not uniformly the 1st for every unit regardless of when that tenancy
-began. No entity in `product.md`'s data model has a field to hold a
-configurable due day at all.
+**Conflicting source requirements.** The rent lifecycle flowchart says
+"1st of the month — a rent row is created per unit," reading as a
+portfolio-wide constant. But `L-04`'s **Mid-month move-in** rule and
+its per-row **Due date** column imply due dates are meaningful per
+tenancy. No entity in `product.md`'s data model holds a configurable
+due day.
 
 **Why they cannot both be implemented literally.** If "the 1st" is a
-hardcoded constant, there is no field anywhere for a specific tenancy
-to run on a different recurring due day (e.g. a tenant who reliably
-pays on the 5th, once salary clears) — a real practice, and one this
-spec's own per-tenancy rent/deposit terms (`L-02`, `L-12`) already
-assume is flexible everywhere else.
+hardcoded constant, there is no field for a tenancy to run on a
+different recurring due day (e.g. a tenant who pays on the 5th, once
+salary clears) — a real practice this spec's own per-tenancy terms
+(`L-02`, `L-12`) already assume is flexible everywhere else.
 
 **Decision.** `rent_due_day` (day-of-month) is a field on `agreement`
-(D3), not a global constant and not a landlord-wide setting. The
-monthly rent-row generation job reads each unit's *current* agreement's
-`rent_due_day` to compute that month's due date.
+(D3), not a global constant. The monthly rent-row generation job reads
+each unit's *current* agreement's `rent_due_day` to compute that
+month's due date.
 
-**Consequences.** Rent-row generation timing (the job runs on the 1st)
-and the due-date *value* it assigns are decoupled — generation can run
-on the 1st for everyone while still producing different due dates per
-tenancy. The reminder ladder's day-3/10/20 offsets (`L15-TBL-LADDER`)
-are naturally relative to each rent entry's own due date, which now
-already varies correctly per agreement — no further change needed
-there.
+**Consequences.** Generation timing (runs on the 1st) and the due-date
+*value* it assigns are decoupled — generation can run on the 1st for
+everyone while producing different due dates per tenancy. The reminder
+ladder's day-3/10/20 offsets (`L15-TBL-LADDER`) are naturally relative
+to each rent entry's own due date, which already varies correctly per
+agreement.
 
 ---
 
@@ -216,10 +164,10 @@ there.
 
 **Conflicting source requirements.** `product.md`'s **Tenant** entity
 lists "notice status" directly on the tenant. But `L-10`'s filter
-(Current · On notice · Past) and `L11-BTN-ENDTENANCY` both describe
+(Current · On notice · Past) and `L11-BTN-ENDTENANCY` describe
 notice/tenancy state as a lifecycle stage of one specific **stay**, and
-Scope §4's ownership model treats "Tenant" as capable of having history
-(a person could, in principle, tenant again after a gap).
+Scope §4 treats "Tenant" as capable of having history (a person could
+tenant again after a gap).
 
 **Why they cannot both be implemented literally.** Putting notice
 status on the person conflates the person with one specific stay. If
@@ -245,71 +193,60 @@ new `tenancy` row — no reset logic needed.
 ## D6. `audit_event` is its own entity
 
 **Conflicting source requirements.** Many screens describe writing "a
-timeline entry" for a different kind of event each time: `L05-BTN-EDIT`
-("any edit is recorded on the timeline with the old and new value"),
-`L06` (dragging a card between columns, and reopening a request from
-Done), `L07-TML-HISTORY` ("every status change, message sent and note
-added"). `foundations.md` § A2 defines exactly one reusable **Timeline**
-component for all of this. But the only history-shaped entity in
-`product.md`'s data model is **Reminder** (level/sent-on/sent-via/call
-notes) — a shape specific to rent-chasing communications, not to a
-maintenance status change or a manual field edit.
+timeline entry" for a different event each time: `L05-BTN-EDIT`
+("recorded on the timeline with the old and new value"), `L-06`
+(dragging a card, reopening from Done), `L07-TML-HISTORY` ("every
+status change, message sent and note added"). `foundations.md` § A2
+defines one reusable **Timeline** component for all of this. But the
+only history-shaped entity in `product.md`'s data model is
+**Reminder** (level/sent-on/sent-via/call notes) — specific to
+rent-chasing, not a maintenance status change or a field edit.
 
-**Why they cannot both be implemented literally.** A single reusable
-Timeline UI component implies one underlying event shape it renders
-generically. Forcing a maintenance status change or a reopen through
-the Reminder entity would mean inventing fake reminder "levels" for
-events that are not reminders at all.
+**Why they cannot both be implemented literally.** One reusable
+Timeline component implies one underlying event shape it renders
+generically. Forcing a status change or reopen through Reminder would
+mean inventing fake reminder "levels" for non-reminder events.
 
 **Decision.** `audit_event` becomes its own generic, polymorphic,
-append-only entity (what happened, when, optionally an old/new value),
-attachable to any parent record. `reminder` remains a separate,
-domain-specific entity for rent-chasing communications specifically,
-since its fields (level, channel, call notes) are genuinely structured
-and worth querying on their own (e.g. "which tenants are at formal
-level").
+append-only entity (what happened, when, optional old/new value),
+attachable to any parent record. `reminder` stays separate,
+domain-specific to rent-chasing, since its fields (level, channel,
+call notes) are structured and worth querying on their own.
 
-**Consequences.** `foundations.md`'s Timeline component now has one
-real data shape behind it across `L-05`, `L-06`, and `L-07`. Amount
-edits, status changes, and reopens all become `audit_event` rows.
-Payment corrections (D2) and deduction changes (D9) can use the same
-mechanism for a clean audit trail without further schema additions.
+**Consequences.** `foundations.md`'s Timeline now has one real data
+shape across `L-05`, `L-06`, `L-07`. Amount edits, status changes, and
+reopens all become `audit_event` rows. Payment corrections (D2) and
+deduction changes (D9) can reuse the same mechanism.
 
 ---
 
 ## D7. `document.is_protected`
 
 **Conflicting source requirements.** `L-14` offers a uniform "download,
-share, **delete**" on every document row, with no distinction by type.
-But `L-13`'s own rule states: "**Once marked settled, the statement
-becomes read-only. Corrections require a new statement that references
-the first.**" — an explicit immutability requirement for exactly one
-document type, with nowhere in the schema to hold it.
+share, **delete**" on every document row, no distinction by type. But
+`L-13` states: "Once marked settled, the statement becomes read-only.
+Corrections require a new statement that references the first." — an
+immutability requirement for exactly one document type, with nowhere
+in the schema to hold it.
 
 **Why they cannot both be implemented literally.** A uniform delete
-action on every row directly contradicts a rule that says one specific
-row must not be deletable or editable. Without a schema-level flag,
-this constraint could only be enforced by special-casing document type
-inside one screen's button logic — meaning an export, an API, or a
-future admin tool could still delete it.
+action contradicts a rule that one specific row must not be deletable.
+Without a schema-level flag, this could only be enforced by
+special-casing document type inside one screen's button logic — an
+export, API, or future admin tool could still delete it.
 
 **Decision.** `document` gains `is_protected`. A settlement statement
-is marked protected the moment the tenancy is settled (`L13-BTN-CLOSE`).
-Move-in condition photos are also marked protected at creation — this
-is a small extension beyond what any single screen states outright,
-justified directly by the product's own success metric ("Units with
-move-in photos attached — if this is low, the settlement feature is
-decorative," `product.md` § Success metrics): these photos are exactly
-the evidence a future settlement depends on, and losing one to a casual
-`L-14` cleanup would quietly undermine the same feature the metric is
-watching for. `L-14`'s delete action refuses (with an explanation, not
-a silent no-op) on any protected document.
+is marked protected once settled (`L13-BTN-CLOSE`). Move-in condition
+photos are also marked protected at creation — justified by the
+product's own success metric ("Units with move-in photos attached...
+if low, settlement is decorative"): they're the evidence a settlement
+depends on. `L-14`'s delete action refuses (with an explanation) on any
+protected document.
 
-**Consequences.** `L-13`'s existing "read-only once settled" rule now
-has a schema-level home instead of only living in one screen's logic.
-`L-14` needs a small rule addition (refuse-with-explanation on
-protected rows) — not built here, since no application code is touched
-by this ticket, but recorded for whoever builds `L-14`.
+**Consequences.** `L-13`'s "read-only once settled" rule now has a
+schema-level home instead of living only in one screen's logic. `L-14`
+needs a small rule addition (refuse-with-explanation on protected
+rows) — recorded here for whoever builds `L-14`.
 
 ---
 
@@ -361,18 +298,16 @@ number computed over nothing.
 
 **Decision.** `deduction` becomes its own entity, scoped to the
 tenancy being settled: description, reason, amount, an optional
-document reference (the photo — see D10), and an optional `request_id`
-when pulled from repair history via `L13-BTN-FROMREQUESTS`. The deposit
-balance is computed from `tenancy.deposit_paid` minus the sum of that
-tenancy's deductions, not tracked as a separately maintained ledger
-field.
+document reference (the photo — D10), and an optional `request_id` when
+pulled via `L13-BTN-FROMREQUESTS`. The deposit balance is computed from
+`tenancy.deposit_paid` minus the sum of deductions, not a separately
+maintained ledger field.
 
 **Consequences.** `L13-TBL-DEDUCTIONS` becomes a CRUD view over
-`deduction` rows. `L13-BTN-CLOSE` ("mark settled") transitions the
-tenancy and, per D7, marks the generated `P-02` statement document
-protected. This closes the gap already flagged in
-`scripts/seed/SPEC.md` § Schema dependency item 6 ("deposit deductions
-have no entity") during the earlier demo-seed design work.
+`deduction` rows. `L13-BTN-CLOSE` transitions the tenancy and, per D7,
+marks the generated `P-02` statement protected. This closes the gap
+flagged in `scripts/seed/SPEC.md` § Schema dependency item 6 during the
+earlier demo-seed design work.
 
 ---
 
@@ -408,35 +343,27 @@ earlier demo-seed ticket.
 ## D11. Receipts are not persisted as documents
 
 **Conflicting source requirements.** `product.md`'s **Document** type
-enum explicitly includes `"receipt"`, implying every receipt is (or
-can be) a stored document. But `P-01` is described purely as a print
-view generated on load from rent/payment data, and neither `L-04`'s nor
-`L-05`'s mark-paid flow ever mentions creating a document — only
-assigning a receipt number.
+enum includes `"receipt"`, implying every receipt is a stored document.
+But `P-01` is described purely as a print view generated on load, and
+neither `L-04`'s nor `L-05`'s mark-paid flow mentions creating a
+document — only assigning a receipt number.
 
 **Why they cannot both be implemented literally.** If every payment
-(D2) automatically created a persisted receipt document, `L-14`'s
-document table would carry one machine-generated row per payment across
-a portfolio's entire history — a volume nothing in `L-14`'s own
-description ("every **uploaded** file") suggests, which reads as things
-a person explicitly uploaded (agreements, ID proofs, photos), not a
-print artifact regenerated on every open. Left undecided, the
-`"receipt"` document type is unreachable dead code in the schema.
+(D2) created a persisted receipt document, `L-14`'s table would carry
+one machine-generated row per payment across a portfolio's entire
+history — a volume nothing in `L-14`'s "every **uploaded** file"
+suggests. Left undecided, `"receipt"` is unreachable dead code.
 
 **Decision.** Receipts are not persisted as `document` rows. `P-01`
-always renders live from `payment` (D2) plus `rent_entry`/`tenant`/
-`unit`/`landlord` data; `payment.receipt_number` is sufficient to
-identify and re-print a receipt at any time. `document.type = "receipt"`
-is kept in the enum only for the real, separate case of a landlord
-manually uploading a scanned/external receipt (e.g. from before
-RentRoll was adopted) — an exception path, not the normal one.
+renders live from `payment` (D2) plus `rent_entry`/`tenant`/`unit`
+data; `payment.receipt_number` is sufficient to re-print at any time.
+`document.type = "receipt"` is kept only for a landlord manually
+uploading a scanned/external receipt — an exception path.
 
 **Consequences.** `L-14`'s document table will rarely show
-receipt-typed rows in normal use — expected, not a bug. This matches
-the approach `scripts/seed/SPEC.md` § Schema dependency item 7 already
-took independently ("the seed does not generate a receipt Document for
-every paid rent entry... a deliberate simplification"), confirming the
-two pieces of work agree.
+receipt-typed rows in normal use — expected. This matches
+`scripts/seed/SPEC.md` § Schema dependency item 7, which independently
+made the same simplification.
 
 ---
 
